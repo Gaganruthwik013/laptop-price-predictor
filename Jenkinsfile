@@ -2,49 +2,41 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "laptop-app"
-        CONTAINER_NAME = "laptop-price-prediction"
-        PORT = "5000"
+        IMAGE_NAME = "laptop-price-estimator"
+        DOCKERHUB_USER = "your_dockerhub_username" // optional if pushing
     }
 
     stages {
-        stage('Clone Repo') {
+        stage('Clone Repository') {
             steps {
-                echo "Cloning repository..."
-                // If this is a freestyle project with Jenkins Git configured, this is optional
-                checkout scm
+                git 'https://github.com/Gaganruthwik013/laptop-price-predictor.git'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                echo "Building Docker image..."
-                sh "docker build -t ${IMAGE_NAME} ."
-            }
-        }
-
-        stage('Stop Old Container') {
-            steps {
-                echo "Stopping old container if running..."
-                sh "docker stop ${CONTAINER_NAME} || true"
-                sh "docker rm ${CONTAINER_NAME} || true"
+                script {
+                    sh "docker build -t ${IMAGE_NAME} ."
+                }
             }
         }
 
         stage('Run Docker Container') {
             steps {
-                echo "Running Docker container..."
-                sh "docker run -d --name ${CONTAINER_NAME} -p ${PORT}:5000 ${IMAGE_NAME}"
+                script {
+                    // Stop if already running
+                    sh "docker rm -f laptop-app || true"
+                    // Run new container
+                    sh "docker run -d -p 5000:5000 --name laptop-app ${IMAGE_NAME}"
+                }
             }
         }
-    }
 
-    post {
-        success {
-            echo "App running at http://localhost:5000"
-        }
-        failure {
-            echo "Something went wrong!"
-        }
-    }
-}
+        // Optional: push to Docker Hub
+        /*
+        stage('Push to Docker Hub') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                    script {
+                        sh "echo $PASSWORD | docker login -u $USERNAME --password-stdin"
+                        sh "docker tag ${IMAGE_NAME} ${DOCKERH_
