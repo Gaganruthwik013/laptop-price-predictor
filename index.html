@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Laptop Price Estimator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding-top: 50px;
+        }
+        .card {
+            border-radius: 16px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2 class="text-center mb-4">💻 Laptop Price Estimator</h2>
+    <div class="card p-4 mx-auto" style="max-width: 500px;">
+        <form id="laptop-form">
+            <div class="mb-3">
+                <label for="company" class="form-label">Select Company</label>
+                <select class="form-select" id="company" required>
+                    <option value="" selected disabled>Choose...</option>
+                    {% for company in companies %}
+                        <option value="{{ company }}">{{ company }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label for="cpu" class="form-label">Select CPU</label>
+                <select class="form-select" id="cpu" disabled required></select>
+            </div>
+
+            <div class="mb-3">
+                <label for="ram" class="form-label">Select RAM</label>
+                <select class="form-select" id="ram" disabled required></select>
+            </div>
+
+            <div class="d-grid">
+                <button type="submit" class="btn btn-primary" id="submitBtn" disabled>Estimate Price</button>
+            </div>
+        </form>
+
+        <div class="alert alert-info text-center mt-4 d-none" id="result"></div>
+    </div>
+</div>
+
+<script>
+document.getElementById('company').addEventListener('change', async function () {
+    const company = this.value;
+    const cpuSelect = document.getElementById('cpu');
+    const ramSelect = document.getElementById('ram');
+    cpuSelect.innerHTML = `<option selected disabled>Loading...</option>`;
+    ramSelect.innerHTML = '';
+    document.getElementById('submitBtn').disabled = true;
+
+    const res = await fetch('/get_cpus', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ company })
+    });
+    const cpus = await res.json();
+    cpuSelect.innerHTML = '<option selected disabled>Choose...</option>';
+    cpus.forEach(cpu => {
+        cpuSelect.innerHTML += `<option value="${cpu}">${cpu}</option>`;
+    });
+    cpuSelect.disabled = false;
+    ramSelect.disabled = true;
+});
+
+document.getElementById('cpu').addEventListener('change', async function () {
+    const company = document.getElementById('company').value;
+    const cpu = this.value;
+    const ramSelect = document.getElementById('ram');
+    ramSelect.innerHTML = `<option selected disabled>Loading...</option>`;
+    document.getElementById('submitBtn').disabled = true;
+
+    const res = await fetch('/get_rams', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ company, cpu })
+    });
+    const rams = await res.json();
+    ramSelect.innerHTML = '<option selected disabled>Choose...</option>';
+    rams.forEach(ram => {
+        ramSelect.innerHTML += `<option value="${ram}">${ram}</option>`;
+    });
+    ramSelect.disabled = false;
+});
+
+document.getElementById('ram').addEventListener('change', function () {
+    document.getElementById('submitBtn').disabled = false;
+});
+
+document.getElementById('laptop-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const company = document.getElementById('company').value;
+    const cpu = document.getElementById('cpu').value;
+    const ram = document.getElementById('ram').value;
+
+    const res = await fetch('/get_price', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ company, cpu, ram })
+    });
+
+    const data = await res.json();
+    const result = document.getElementById('result');
+    result.classList.remove('d-none');
+    result.textContent = `Estimated Price: ${data.price}`;
+});
+</script>
+</body>
+</html>
